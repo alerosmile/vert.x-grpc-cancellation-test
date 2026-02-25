@@ -1,30 +1,33 @@
 package io.grpc.examples.cancellation;
 
-import io.vertx.core.Future;
-import io.vertx.core.VerticleBase;
-import io.vertx.grpcio.server.GrpcIoServer;
-import io.vertx.launcher.application.VertxApplication;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.ThreadingModel;
+import io.vertx.core.Vertx;
+import io.vertx.grpc.server.GrpcServer;
+import io.vertx.grpc.server.GrpcServiceBridge;
 
-public class CancellationServerVertx extends VerticleBase
+public class CancellationServerVertx extends AbstractVerticle
 {
   private static final int PORT = 50051;
 
   public static void main(String[] args)
   {
-    VertxApplication.main(new String[] { CancellationServerVertx.class.getName() });
+    Vertx vertx = Vertx.vertx();
+    vertx.deployVerticle(new CancellationServerVertx(), new DeploymentOptions().setThreadingModel(ThreadingModel.WORKER));
     System.out.println("Server started, listening on " + PORT);
   }
 
   @Override
-  public Future<?> start()
+  public void start()
   {
-    GrpcIoServer grpcServer = GrpcIoServer.server(vertx);
+    GrpcServer grpcServer = GrpcServer.server(vertx);
 
     SlowEcho service = new SlowEcho();
 
-    grpcServer.addService(service);
+    GrpcServiceBridge.bridge(service).bind(grpcServer);
 
-    return vertx
+    vertx
         .createHttpServer()
         .requestHandler(grpcServer)
         .listen(PORT);
