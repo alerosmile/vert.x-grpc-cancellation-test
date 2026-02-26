@@ -1,6 +1,6 @@
 package io.grpc.examples.cancellation;
 
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.CompletableFuture;
 
 import io.grpc.Status;
 import io.grpc.examples.echo.EchoGrpc;
@@ -16,32 +16,32 @@ class SlowEcho extends EchoGrpc.EchoImplBase
   {
     System.out.println("\nUnary RPC started: " + request.getMessage());
 
-    ServerCallStreamObserver<EchoResponse> serverCallStreamObserver = null;
-    if(responseObserver instanceof ServerCallStreamObserver<?>)
+    CompletableFuture.runAsync(() ->
     {
-      serverCallStreamObserver = (ServerCallStreamObserver<EchoResponse>)responseObserver;
-    }
-
-    for(int i = 0; i < 20; i++)
-    {
-      FutureTask<Void> task = new FutureTask<>(() ->
+      for(int i = 0; i < 20; i++)
       {
-        Thread.sleep(100); // Do some work
-        return null;
-      });
+        try
+        {
+          Thread.sleep(100);
+        }
+        catch(InterruptedException e)
+        {
+        }
 
-      if(serverCallStreamObserver != null && serverCallStreamObserver.isCancelled())
-      {
-        task.cancel(true);
-        System.out.println("Unary RPC cancelled");
-        responseObserver.onError(Status.CANCELLED.withDescription("RPC cancelled").asRuntimeException());
-        return;
+        if(responseObserver instanceof ServerCallStreamObserver<?> serverCallStreamObserver)
+        {
+          if(serverCallStreamObserver.isCancelled())
+          {
+            System.out.println("Unary RPC cancelled");
+            responseObserver.onError(Status.CANCELLED.withDescription("RPC cancelled").asRuntimeException());
+            return;
+          }
+        }
       }
 
-      task.run();
-    }
-    responseObserver.onNext(EchoResponse.newBuilder().setMessage(request.getMessage()).build());
-    responseObserver.onCompleted();
-    System.out.println("Unary RPC completed");
+      responseObserver.onNext(EchoResponse.newBuilder().setMessage(request.getMessage()).build());
+      responseObserver.onCompleted();
+      System.out.println("Unary RPC completed");
+    });
   }
 }

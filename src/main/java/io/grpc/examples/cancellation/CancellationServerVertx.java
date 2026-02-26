@@ -1,8 +1,6 @@
 package io.grpc.examples.cancellation;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.ThreadingModel;
 import io.vertx.core.Vertx;
 import io.vertx.grpc.server.GrpcServer;
 import io.vertx.grpc.server.GrpcServiceBridge;
@@ -14,7 +12,7 @@ public class CancellationServerVertx extends AbstractVerticle
   public static void main(String[] args)
   {
     Vertx vertx = Vertx.vertx();
-    vertx.deployVerticle(new CancellationServerVertx(), new DeploymentOptions().setThreadingModel(ThreadingModel.WORKER));
+    vertx.deployVerticle(new CancellationServerVertx());
     System.out.println("Server started, listening on " + PORT);
   }
 
