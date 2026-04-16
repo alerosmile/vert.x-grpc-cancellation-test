@@ -10,6 +10,7 @@
  * specific language governing permissions and limitations under the License. */
 package io.grpc.examples.cancellation;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -30,6 +31,7 @@ import io.grpc.stub.ClientResponseObserver;
 public class CancellationClient
 {
   private final Channel channel;
+  private final CompletableFuture<Void> shutDownGuard = new CompletableFuture<>();
 
   public CancellationClient(Channel channel)
   {
@@ -47,7 +49,13 @@ public class CancellationClient
     {
       Thread.currentThread().interrupt();
     }
+
+    System.out.println("Cancelling RPC...");
     reqCallObserver.cancel("That's enough. I'm bored", null);
+
+    System.out.println("Waiting for RPC to complete...");
+    shutDownGuard.get();
+    System.out.println("Waiting for RPC completed.");
   }
 
   public ClientCallStreamObserver<EchoRequest> echoAsync(String text)
@@ -67,13 +75,15 @@ public class CancellationClient
       @Override
       public void onCompleted()
       {
-        System.out.println("RPC completed");
+        System.out.println("RPC completed successfully");
+        shutDownGuard.complete(null);
       }
 
       @Override
       public void onError(Throwable t)
       {
         System.out.println("RPC failed: " + Status.fromThrowable(t));
+        shutDownGuard.complete(null);
       }
 
       @Override
