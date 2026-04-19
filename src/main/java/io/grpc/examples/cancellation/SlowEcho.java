@@ -2,7 +2,6 @@ package io.grpc.examples.cancellation;
 
 import java.util.concurrent.CompletableFuture;
 
-import io.grpc.Status;
 import io.grpc.examples.echo.EchoGrpc;
 import io.grpc.examples.echo.EchoRequest;
 import io.grpc.examples.echo.EchoResponse;
@@ -15,6 +14,14 @@ class SlowEcho extends EchoGrpc.EchoImplBase
   public void unaryEcho(EchoRequest request, StreamObserver<EchoResponse> responseObserver)
   {
     System.out.println("\nUnary RPC started: " + request.getMessage());
+
+    if(responseObserver instanceof ServerCallStreamObserver<?> serverCallStreamObserver)
+    {
+      serverCallStreamObserver.setOnCancelHandler(() ->
+      {
+        System.out.println("Cancel handler called");
+      });
+    }
 
     CompletableFuture.runAsync(() ->
     {
@@ -33,7 +40,6 @@ class SlowEcho extends EchoGrpc.EchoImplBase
           if(serverCallStreamObserver.isCancelled())
           {
             System.out.println("Unary RPC cancelled");
-            responseObserver.onError(Status.CANCELLED.withDescription("RPC cancelled").asRuntimeException());
             return;
           }
         }
